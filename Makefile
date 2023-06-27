@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 
 # all the recipes are phony (no files to check).
-.PHONY: .install-poetry docs tests build dev run poetry-update poetry-install install-local run-evcc run-secc run-ocpp mypy reformat black flake8 code-quality
+.PHONY: .install-poetry docs tests build dev dev-evcc dev-secc run poetry-update poetry-install install-local run-evcc run-secc run-ocpp mypy reformat black flake8 code-quality
 
 export PATH := ${HOME}/.local/bin:$(PATH)
 
@@ -64,6 +64,18 @@ build: generate_v2_certs
 dev:
 	# the dev file apply changes to the original compose file
 	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+dev-evcc:
+	# the dev file apply changes to the original compose file
+	docker-compose -f docker-compose-evcc.yml build \
+	&& docker-compose -f docker-compose-evcc.yml up \
+	; docker-compose -f docker-compose-evcc.yml down
+
+dev-secc:
+	# the dev file apply changes to the original compose file
+	docker-compose -f docker-compose-secc.yml build \
+	&& docker-compose -f docker-compose-secc.yml up \
+	; docker-compose -f docker-compose-secc.yml down
 
 # Run using prod env vars
 run:

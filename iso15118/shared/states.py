@@ -1,8 +1,10 @@
 import base64
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, Type, Union
 
+import environs
 from pydantic import ValidationError
 
 from iso15118.shared.exceptions import (
@@ -42,6 +44,13 @@ from iso15118.shared.messages.v2gtp import V2GTPMessage
 from iso15118.shared.messages.xmldsig import Signature
 
 logger = logging.getLogger(__name__)
+env = environs.Env(eager=False)
+env_path = os.getcwd() + "/.env"
+env.read_env(path=env_path)  # read .env file, if it exists
+if not env.bool('LOG_STATES', default=True):
+    logger.info(__name__ + ' - disable LOG_STATES')
+#    logging.disable(logging.CRITICAL)
+    logger.propagate = False
 
 if TYPE_CHECKING:
     # EVCCCommunicationSession and SECCCommunicationSession are used for
@@ -86,9 +95,9 @@ class State(ABC):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(
-        self,
-        comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
-        timeout: Union[float, int] = 0,
+            self,
+            comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
+            timeout: Union[float, int] = 0,
     ):
         """
         Initialises a state to process a new message. Every state that inherits
@@ -144,15 +153,15 @@ class State(ABC):
 
     @abstractmethod
     async def process_message(
-        self,
-        message: Union[
-            SupportedAppProtocolReq,
-            SupportedAppProtocolRes,
-            V2GMessageV2,
-            V2GMessageV20,
-            V2GMessageDINSPEC,
-        ],
-        message_exi: bytes = None,
+            self,
+            message: Union[
+                SupportedAppProtocolReq,
+                SupportedAppProtocolRes,
+                V2GMessageV2,
+                V2GMessageV20,
+                V2GMessageDINSPEC,
+            ],
+            message_exi: bytes = None,
     ):
         """
         Every State must implement this method to process the incoming message,
@@ -176,22 +185,22 @@ class State(ABC):
         raise NotImplementedError
 
     def create_next_message(
-        self,
-        next_state: Optional[Type["State"]],
-        next_msg: Union[
-            SupportedAppProtocolReq,
-            SupportedAppProtocolRes,
-            BodyBase,
-            V2GMessageV20,
-            BodyBaseDINSPEC,
-            Base64,
-        ],
-        next_msg_timeout: Union[float, int],
-        namespace: Namespace,
-        next_msg_payload_type: Union[
-            DINPayloadTypes, ISOV2PayloadTypes, ISOV20PayloadTypes
-        ] = ISOV2PayloadTypes.EXI_ENCODED,
-        signature: Signature = None,
+            self,
+            next_state: Optional[Type["State"]],
+            next_msg: Union[
+                SupportedAppProtocolReq,
+                SupportedAppProtocolRes,
+                BodyBase,
+                V2GMessageV20,
+                BodyBaseDINSPEC,
+                Base64,
+            ],
+            next_msg_timeout: Union[float, int],
+            namespace: Namespace,
+            next_msg_payload_type: Union[
+                DINPayloadTypes, ISOV2PayloadTypes, ISOV20PayloadTypes
+            ] = ISOV2PayloadTypes.EXI_ENCODED,
+            signature: Signature = None,
     ):
         """
         Is called in case the processing of an incoming message was successful.
@@ -264,8 +273,8 @@ class State(ABC):
         if isinstance(next_msg, BodyBaseDINSPEC):
             note: Union[NotificationDINSPEC, None] = None
             if (
-                self.comm_session.stop_reason
-                and not self.comm_session.stop_reason.successful
+                    self.comm_session.stop_reason
+                    and not self.comm_session.stop_reason.successful
             ):
                 # The fault message must not be bigger than 64 characters according to
                 # the XSD data type description
@@ -291,8 +300,8 @@ class State(ABC):
         elif isinstance(next_msg, BodyBase):
             note: Union[Notification, None] = None
             if (
-                self.comm_session.stop_reason
-                and not self.comm_session.stop_reason.successful
+                    self.comm_session.stop_reason
+                    and not self.comm_session.stop_reason.successful
             ):
                 # The fault message must not be bigger than 64 characters according to
                 # the XSD data type description
@@ -323,7 +332,7 @@ class State(ABC):
             if exi_payload:
                 logger.info(
                     f"Already EXI encoded. Content: "
-                    f"{EXI().get_exi_codec().decode(exi_payload,next_msg.namespace)}"
+                    f"{EXI().get_exi_codec().decode(exi_payload, next_msg.namespace)}"
                 )
         else:
             to_be_exi_encoded = next_msg
@@ -377,43 +386,43 @@ class State(ABC):
 
 class Terminate(State):
     def __init__(
-        self,
-        comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
+            self,
+            comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
     ):
         super().__init__(comm_session)
 
     async def process_message(
-        self,
-        message: Union[
-            SupportedAppProtocolReq,
-            SupportedAppProtocolRes,
-            V2GMessageV2,
-            V2GMessageV20,
-            V2GMessageDINSPEC,
-            Base64,
-        ],
-        message_exi: bytes = None,
+            self,
+            message: Union[
+                SupportedAppProtocolReq,
+                SupportedAppProtocolRes,
+                V2GMessageV2,
+                V2GMessageV20,
+                V2GMessageDINSPEC,
+                Base64,
+            ],
+            message_exi: bytes = None,
     ):
         pass
 
 
 class Pause(State):
     def __init__(
-        self,
-        comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
+            self,
+            comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
     ):
         super().__init__(comm_session)
 
     async def process_message(
-        self,
-        message: Union[
-            SupportedAppProtocolReq,
-            SupportedAppProtocolRes,
-            V2GMessageV2,
-            V2GMessageV20,
-            V2GMessageDINSPEC,
-            Base64,
-        ],
-        message_exi: bytes = None,
+            self,
+            message: Union[
+                SupportedAppProtocolReq,
+                SupportedAppProtocolRes,
+                V2GMessageV2,
+                V2GMessageV20,
+                V2GMessageDINSPEC,
+                Base64,
+            ],
+            message_exi: bytes = None,
     ):
         pass

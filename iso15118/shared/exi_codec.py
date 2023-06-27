@@ -1,8 +1,10 @@
 import json
 import logging
+import os
 from base64 import b64decode, b64encode
 from typing import Union
 
+import environs
 from pydantic import ValidationError
 
 from iso15118.shared.exceptions import (
@@ -71,6 +73,13 @@ from iso15118.shared.messages.iso15118_20.dc import (
 from iso15118.shared.settings import MESSAGE_LOG_EXI, MESSAGE_LOG_JSON
 
 logger = logging.getLogger(__name__)
+env = environs.Env(eager=False)
+env_path = os.getcwd() + "/.env"
+env.read_env(path=env_path)  # read .env file, if it exists
+if not env.bool('LOG_EXI_CODEC', default=True):
+    logger.info(__name__ + ' - disable LOG_EXI_CODEC')
+#    logging.disable(logging.CRITICAL)
+    logger.propagate = False
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -200,8 +209,8 @@ class EXI:
             # Pydantic does not export the name of the model itself to a dict,
             # so we need to add it (the message names like 'SessionSetupReq')
             if (
-                str(msg_element) == "CertificateChain"
-                and protocol_ns == Namespace.ISO_V2_MSG_DEF
+                    str(msg_element) == "CertificateChain"
+                    and protocol_ns == Namespace.ISO_V2_MSG_DEF
             ):
                 # TODO: If we add `ContractSignatureCertChain` as the return of __str__
                 #       for the CertificateChain class, do we still need this if clause?
@@ -210,7 +219,7 @@ class EXI:
                 # 'CertificateChain' (the type of ContractSignatureCertChain)
                 message_dict = {"ContractSignatureCertChain": msg_to_dct}
             elif str(msg_element) == "CertificateChain" and protocol_ns.startswith(
-                Namespace.ISO_V20_BASE
+                    Namespace.ISO_V20_BASE
             ):
                 # TODO: If we add `CPSCertificateChain` as the return of __str__
                 #       for a unique class for V20 or even call it CPSCertificateChain
@@ -228,7 +237,7 @@ class EXI:
                 # 'SignedCertificateChain' (the type of OEMProvisioningCertificateChain)
                 message_dict = {"OEMProvisioningCertificateChain": msg_to_dct}
             elif isinstance(msg_element, V2GMessageV2) or isinstance(
-                msg_element, V2GMessageDINSPEC
+                    msg_element, V2GMessageDINSPEC
             ):
                 message_dict = {"V2G_Message": msg_to_dct}
             else:
@@ -258,7 +267,7 @@ class EXI:
         return exi_stream
 
     def from_exi(
-        self, exi_message: bytes, namespace: str
+            self, exi_message: bytes, namespace: str
     ) -> Union[
         SupportedAppProtocolReq,
         SupportedAppProtocolRes,

@@ -7,10 +7,12 @@ receiving, and processing messages during an ISO 15118 communication session.
 
 import asyncio
 import logging
+import os
 from abc import ABC, abstractmethod
 from asyncio.streams import StreamReader, StreamWriter
 from typing import List, Optional, Tuple, Type, Union
 
+import environs
 from pydantic import ValidationError
 from typing_extensions import TYPE_CHECKING
 
@@ -55,6 +57,14 @@ from iso15118.shared.states import Pause, State, Terminate
 from iso15118.shared.utils import wait_for_tasks
 
 logger = logging.getLogger(__name__)
+env = environs.Env(eager=False)
+env_path = os.getcwd() + "/.env"
+env.read_env(path=env_path)  # read .env file, if it exists
+if not env.bool('LOG_COMM_SESSION', default=True):
+    logger.info(__name__ + ' - disable LOG_COMM_SESSION')
+#    logging.disable(logging.CRITICAL)
+    logger.propagate = False
+
 
 if TYPE_CHECKING:
     # EVCCCommunicationSession and SECCCommunicationSession are used for
@@ -77,9 +87,9 @@ class SessionStateMachine(ABC):
     """
 
     def __init__(
-        self,
-        start_state: Type[State],
-        comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
+            self,
+            start_state: Type[State],
+            comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
     ):
         """
         The EVCC state machine starts with waiting for the
@@ -117,8 +127,8 @@ class SessionStateMachine(ABC):
         }
 
     def get_exi_ns(
-        self,
-        payload_type: Union[DINPayloadTypes, ISOV2PayloadTypes, ISOV20PayloadTypes],
+            self,
+            payload_type: Union[DINPayloadTypes, ISOV2PayloadTypes, ISOV20PayloadTypes],
     ) -> str:
         """
         Provides the right protocol namespace for the EXI decoder.
@@ -249,8 +259,8 @@ class SessionStateMachine(ABC):
             raise exc
 
         if (
-            self.current_state.next_v2gtp_msg is None
-            and self.current_state.next_state is not Terminate
+                self.current_state.next_v2gtp_msg is None
+                and self.current_state.next_state is not Terminate
         ):
             raise FaultyStateImplementationError(
                 "Field 'next_v2gtp_msg' is "
@@ -286,11 +296,11 @@ class V2GCommunicationSession(SessionStateMachine):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(
-        self,
-        transport: Tuple[StreamReader, StreamWriter],
-        start_state: Type["State"],
-        session_handler_queue: asyncio.Queue,
-        comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
+            self,
+            transport: Tuple[StreamReader, StreamWriter],
+            start_state: Type["State"],
+            session_handler_queue: asyncio.Queue,
+            comm_session: Union["EVCCCommunicationSession", "SECCCommunicationSession"],
     ):
         """
         Initialise the communication session with EVCC or SECC specific
@@ -501,10 +511,10 @@ class V2GCommunicationSession(SessionStateMachine):
                 timeout = self.current_state.next_msg_timeout
                 self.go_to_next_state()
             except (
-                MessageProcessingError,
-                FaultyStateImplementationError,
-                EXIDecodingError,
-                InvalidV2GTPMessageError,
+                    MessageProcessingError,
+                    FaultyStateImplementationError,
+                    EXIDecodingError,
+                    InvalidV2GTPMessageError,
             ) as exc:
                 message_name = ""
                 additional_info = ""

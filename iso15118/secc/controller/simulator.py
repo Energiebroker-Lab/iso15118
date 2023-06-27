@@ -5,6 +5,7 @@ This module contains the code to retrieve (hardware-related) data from the EVSE
 import base64
 import logging
 import math
+import os
 import time
 from typing import Dict, List, Optional, Union
 
@@ -184,6 +185,7 @@ class SimEVSEController(EVSEControllerInterface):
     """
     A simulated version of an EVSE controller
     """
+    _pmax_value: int = 0
 
     @classmethod
     async def create(cls):
@@ -233,8 +235,9 @@ class SimEVSEController(EVSEControllerInterface):
         # a single EVSE. Providing this here only for simulation purposes.
         # ac_single_phase = EnergyTransferModeEnum.AC_SINGLE_PHASE_CORE
         ac_three_phase = EnergyTransferModeEnum.AC_THREE_PHASE_CORE
-        dc_extended = EnergyTransferModeEnum.DC_EXTENDED
-        return [dc_extended, ac_three_phase]
+        # dc_extended = EnergyTransferModeEnum.DC_EXTENDED
+        # return [dc_extended, ac_three_phase]
+        return [ac_three_phase]
 
     async def get_scheduled_se_params(
         self,
@@ -460,56 +463,74 @@ class SimEVSEController(EVSEControllerInterface):
     ) -> Optional[List[SAScheduleTuple]]:
         """Overrides EVSEControllerInterface.get_sa_schedule_list()."""
         sa_schedule_list: List[SAScheduleTuple] = []
+        try:
+            # Get the file path from the environment variable
+            file_path = os.environ.get("PMAX_FILE_PATH")
 
+            # Read the file
+            with open(file_path, 'r') as file:
+                # Read the comma-separated values from the file
+                p_max_value = int(file.readline().strip())
+                SimEVSEController._pmax_value = p_max_value
+        except Exception as e:
+            logger.info(e)
         if departure_time == 0:
             # [V2G2-304] If no departure_time is provided, the sum of the individual
             # time intervals shall be greater than or equal to 24 hours.
             departure_time = 86400
 
         # PMaxSchedule
-        p_max_1 = PVPMax(multiplier=0, value=11000, unit=UnitSymbol.WATT)
-        p_max_2 = PVPMax(multiplier=0, value=7000, unit=UnitSymbol.WATT)
+        # p_max_1 = PVPMax(multiplier=0, value=11000, unit=UnitSymbol.WATT)
+        # p_max_2 = PVPMax(multiplier=0, value=7000, unit=UnitSymbol.WATT)
+        p_max_1 = PVPMax(multiplier=0, value=SimEVSEController._pmax_value, unit=UnitSymbol.WATT)
         p_max_schedule_entry_1 = PMaxScheduleEntry(
-            p_max=p_max_1, time_interval=RelativeTimeInterval(start=0)
+            # p_max=p_max_1, time_interval=RelativeTimeInterval(start=0, duration=300)
+            p_max=p_max_1, time_interval=RelativeTimeInterval(start=0, duration=5)
         )
-        p_max_schedule_entry_2 = PMaxScheduleEntry(
-            p_max=p_max_2,
-            time_interval=RelativeTimeInterval(
-                start=math.floor(departure_time / 2),
-                duration=math.ceil(departure_time / 2),
-            ),
-        )
+        # p_max_schedule_entry_1 = PMaxScheduleEntry(
+        #     p_max=p_max_1, time_interval=RelativeTimeInterval(start=0)
+        # )
+        # p_max_schedule_entry_2 = PMaxScheduleEntry(
+        #     p_max=p_max_2,
+        #     time_interval=RelativeTimeInterval(
+        #         start=math.floor(departure_time / 2),
+        #         duration=math.ceil(departure_time / 2),
+        #     ),
+        # )
+        # p_max_schedule = PMaxSchedule(
+        #     schedule_entries=[p_max_schedule_entry_1, p_max_schedule_entry_2]
+        # )
         p_max_schedule = PMaxSchedule(
-            schedule_entries=[p_max_schedule_entry_1, p_max_schedule_entry_2]
+            schedule_entries=[p_max_schedule_entry_1]
         )
 
         # SalesTariff
-        sales_tariff_entries: List[SalesTariffEntry] = []
-        sales_tariff_entry_1 = SalesTariffEntry(
-            e_price_level=1,
-            time_interval=RelativeTimeInterval(start=0),
-        )
-        sales_tariff_entry_2 = SalesTariffEntry(
-            e_price_level=2,
-            time_interval=RelativeTimeInterval(
-                start=math.floor(departure_time / 2),
-                duration=math.ceil(departure_time / 2),
-            ),
-        )
-        sales_tariff_entries.append(sales_tariff_entry_1)
-        sales_tariff_entries.append(sales_tariff_entry_2)
-        sales_tariff = SalesTariff(
-            id="id1",
-            sales_tariff_id=10,  # a random id
-            sales_tariff_entry=sales_tariff_entries,
-            num_e_price_levels=2,
-        )
+        # sales_tariff_entries: List[SalesTariffEntry] = []
+        # sales_tariff_entry_1 = SalesTariffEntry(
+        #     e_price_level=1,
+        #     time_interval=RelativeTimeInterval(start=0),
+        # )
+        # sales_tariff_entry_2 = SalesTariffEntry(
+        #     e_price_level=2,
+        #     time_interval=RelativeTimeInterval(
+        #         start=math.floor(departure_time / 2),
+        #         duration=math.ceil(departure_time / 2),
+        #     ),
+        # )
+        # sales_tariff_entries.append(sales_tariff_entry_1)
+        # sales_tariff_entries.append(sales_tariff_entry_2)
+        # sales_tariff = SalesTariff(
+        #     id="id1",
+        #     sales_tariff_id=10,  # a random id
+        #     sales_tariff_entry=sales_tariff_entries,
+        #     num_e_price_levels=2,
+        # )
 
         # Putting the list of SAScheduleTuple entries together
         sa_schedule_tuple = SAScheduleTuple(
             sa_schedule_tuple_id=1,
             p_max_schedule=p_max_schedule,
-            sales_tariff=sales_tariff,
+            sales_tariff=None,
         )
 
         # TODO We could also implement an optional SalesTariff, but for the sake of

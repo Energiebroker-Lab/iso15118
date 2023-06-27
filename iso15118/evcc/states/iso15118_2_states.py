@@ -1114,7 +1114,7 @@ class ChargingStatus(StateEVCC):
 
         charging_status_res: ChargingStatusRes = msg.body.charging_status_res
         ac_evse_status: ACEVSEStatus = charging_status_res.ac_evse_status
-
+        logger.info(f"tuesday: max_delay: {ac_evse_status.notification_max_delay}, notification: {ac_evse_status.evse_notification}, delay: {ac_evse_status.rcd}")
         if charging_status_res.receipt_required and self.comm_session.is_tls:
             logger.debug("SECC requested MeteringReceipt")
 
