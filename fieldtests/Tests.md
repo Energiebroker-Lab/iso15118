@@ -1,3 +1,17 @@
+# Preparation
+
+## activate venv
+
+```python
+. ~/iso15118/venv/bin/activate
+```
+
+## build the project
+
+```python
+rm ~/iso15118/dist/* && cd ~/iso15118 && poetry build && pip install ~/iso15118/dist/*.whl
+```
+
 # Helper
 
 ## AC/DC Charging
