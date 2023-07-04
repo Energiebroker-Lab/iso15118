@@ -220,7 +220,7 @@ class SimEVSEController(EVSEControllerInterface):
         return "UK123E1234"
 
     async def get_supported_energy_transfer_modes(
-        self, protocol: Protocol
+            self, protocol: Protocol
     ) -> List[EnergyTransferModeEnum]:
         """Overrides EVSEControllerInterface.get_supported_energy_transfer_modes()."""
         if protocol == Protocol.DIN_SPEC_70121:
@@ -240,9 +240,9 @@ class SimEVSEController(EVSEControllerInterface):
         return [ac_three_phase]
 
     async def get_scheduled_se_params(
-        self,
-        selected_energy_service: SelectedEnergyService,
-        schedule_exchange_req: ScheduleExchangeReq,
+            self,
+            selected_energy_service: SelectedEnergyService,
+            schedule_exchange_req: ScheduleExchangeReq,
     ) -> Optional[ScheduledScheduleExchangeResParams]:
         """Overrides EVSEControllerInterface.get_scheduled_se_params()."""
         charging_power_schedule_entry = PowerScheduleEntry(
@@ -362,7 +362,7 @@ class SimEVSEController(EVSEControllerInterface):
         return scheduled_params
 
     async def get_service_parameter_list(
-        self, service_id: int
+            self, service_id: int
     ) -> Optional[ServiceParameterList]:
         """Overrides EVSEControllerInterface.get_service_parameter_list()."""
         if service_id in self.v20_service_id_parameter_mapping.keys():
@@ -376,9 +376,9 @@ class SimEVSEController(EVSEControllerInterface):
         return service_parameter_list
 
     async def get_dynamic_se_params(
-        self,
-        selected_energy_service: SelectedEnergyService,
-        schedule_exchange_req: ScheduleExchangeReq,
+            self,
+            selected_energy_service: SelectedEnergyService,
+            schedule_exchange_req: ScheduleExchangeReq,
     ) -> Optional[DynamicScheduleExchangeResParams]:
         """Overrides EVSEControllerInterface.get_dynamic_se_params()."""
         price_level_schedule_entry = PriceLevelScheduleEntry(
@@ -425,17 +425,17 @@ class SimEVSEController(EVSEControllerInterface):
         return False
 
     async def is_authorized(
-        self,
-        id_token: Optional[str] = None,
-        id_token_type: Optional[AuthorizationTokenType] = None,
-        certificate_chain: Optional[bytes] = None,
-        hash_data: Optional[List[Dict[str, str]]] = None,
+            self,
+            id_token: Optional[str] = None,
+            id_token_type: Optional[AuthorizationTokenType] = None,
+            certificate_chain: Optional[bytes] = None,
+            hash_data: Optional[List[Dict[str, str]]] = None,
     ) -> AuthorizationStatus:
         """Overrides EVSEControllerInterface.is_authorized()."""
         return AuthorizationStatus.ACCEPTED
 
     async def get_sa_schedule_list_dinspec(
-        self, max_schedule_entries: Optional[int], departure_time: int = 0
+            self, max_schedule_entries: Optional[int], departure_time: int = 0
     ) -> Optional[List[SAScheduleTupleEntryDINSPEC]]:
         """Overrides EVSEControllerInterface.get_sa_schedule_list_dinspec()."""
         sa_schedule_list: List[SAScheduleTupleEntryDINSPEC] = []
@@ -456,13 +456,38 @@ class SimEVSEController(EVSEControllerInterface):
         return sa_schedule_list
 
     async def get_sa_schedule_list(
-        self,
-        ev_charge_params_limits: EVChargeParamsLimits,
-        max_schedule_entries: Optional[int],
-        departure_time: int = 0,
+            self,
+            ev_charge_params_limits: EVChargeParamsLimits,
+            max_schedule_entries: Optional[int],
+            departure_time: int = 0,
     ) -> Optional[List[SAScheduleTuple]]:
         """Overrides EVSEControllerInterface.get_sa_schedule_list()."""
         sa_schedule_list: List[SAScheduleTuple] = []
+        test = "default"
+        # test = "2-end-with-0"
+        # test = "2-start-with-0"
+        # test = "4.1"
+        # test = "4.2"
+        test_schedules = {
+            "default": [],
+            "2-end-with-0": [],
+            "2-start-with-0": [],
+            "4.1": [],
+            "4.2": []
+        }
+
+        def get_schedule_entry(pmax, start=0, duration=3600):
+            if duration is None:
+                return PMaxScheduleEntry(
+                    p_max=PVPMax(multiplier=0, value=pmax, unit=UnitSymbol.WATT),
+                    time_interval=RelativeTimeInterval(start=start)
+                )
+            else:
+                return PMaxScheduleEntry(
+                    p_max=PVPMax(multiplier=0, value=pmax, unit=UnitSymbol.WATT),
+                    time_interval=RelativeTimeInterval(start=start, duration=duration)
+                )
+
         try:
             # Get the file path from the environment variable
             file_path = os.environ.get("PMAX_FILE_PATH")
@@ -482,11 +507,31 @@ class SimEVSEController(EVSEControllerInterface):
         # PMaxSchedule
         # p_max_1 = PVPMax(multiplier=0, value=11000, unit=UnitSymbol.WATT)
         # p_max_2 = PVPMax(multiplier=0, value=7000, unit=UnitSymbol.WATT)
-        p_max_1 = PVPMax(multiplier=0, value=SimEVSEController._pmax_value, unit=UnitSymbol.WATT)
-        p_max_schedule_entry_1 = PMaxScheduleEntry(
-            # p_max=p_max_1, time_interval=RelativeTimeInterval(start=0, duration=300)
-            p_max=p_max_1, time_interval=RelativeTimeInterval(start=0, duration=5)
-        )
+        # p_max_1 = PVPMax(multiplier=0, value=SimEVSEController._pmax_value, unit=UnitSymbol.WATT)
+        # p_max_schedule_entry_1 = PMaxScheduleEntry(
+        #     p_max=p_max_1, time_interval=RelativeTimeInterval(start=0, duration=3600)
+        # )
+
+        test_schedules["default"] = [get_schedule_entry(SimEVSEController._pmax_value)]
+        test_schedules["2-end-with-0"] = [get_schedule_entry(SimEVSEController._pmax_value)]
+        test_schedules["2-starts-with-0"] = [get_schedule_entry(SimEVSEController._pmax_value)]
+        if SimEVSEController._pmax_value == 0:
+            test_schedules["2-end-with-0"] = [
+                get_schedule_entry(pmax=11000, start=0, duration=None),
+                get_schedule_entry(pmax=0, start=30, duration=30)
+            ]
+            test_schedules["2-starts-with-0"] = [
+                get_schedule_entry(pmax=0, start=0, duration=None),
+                get_schedule_entry(pmax=11000, start=30, duration=30)
+            ]
+        test_schedules["4.1"] = [get_schedule_entry(SimEVSEController._pmax_value, start=0, duration=30)]
+        test_schedules["4.2"] = [
+            get_schedule_entry(11000, start=0),
+            get_schedule_entry(4000, start=30),
+            get_schedule_entry(6000, start=60),
+            get_schedule_entry(8000, start=90),
+            get_schedule_entry(10000, start=120, duration=30)
+        ]
         # p_max_schedule_entry_1 = PMaxScheduleEntry(
         #     p_max=p_max_1, time_interval=RelativeTimeInterval(start=0)
         # )
@@ -501,7 +546,8 @@ class SimEVSEController(EVSEControllerInterface):
         #     schedule_entries=[p_max_schedule_entry_1, p_max_schedule_entry_2]
         # )
         p_max_schedule = PMaxSchedule(
-            schedule_entries=[p_max_schedule_entry_1]
+            # schedule_entries=[p_max_schedule_entry_1]
+            schedule_entries=test_schedules[test]
         )
 
         # SalesTariff
@@ -613,10 +659,10 @@ class SimEVSEController(EVSEControllerInterface):
         pass
 
     async def send_charging_power_limits(
-        self,
-        protocol: Protocol,
-        control_mode: ControlMode,
-        selected_energy_service: ServiceV20,
+            self,
+            protocol: Protocol,
+            control_mode: ControlMode,
+            selected_energy_service: ServiceV20,
     ) -> None:
         """
         This method shall merge the EV-EVSE charging power limits and send it
@@ -695,7 +741,7 @@ class SimEVSEController(EVSEControllerInterface):
         )
 
     async def get_ac_charge_params_v20(
-        self, selected_service: ServiceV20
+            self, selected_service: ServiceV20
     ) -> Union[
         ACChargeParameterDiscoveryResParams, BPTACChargeParameterDiscoveryResParams
     ]:
@@ -728,7 +774,7 @@ class SimEVSEController(EVSEControllerInterface):
             )
 
     async def get_ac_charge_loop_params_v20(
-        self, control_mode: ControlMode, selected_service: ServiceV20
+            self, control_mode: ControlMode, selected_service: ServiceV20
     ) -> Union[
         ScheduledACChargeLoopResParams,
         BPTScheduledACChargeLoopResParams,
@@ -809,7 +855,7 @@ class SimEVSEController(EVSEControllerInterface):
         )
 
     async def get_evse_present_voltage(
-        self, protocol: Protocol
+            self, protocol: Protocol
     ) -> Union[PVEVSEPresentVoltage, RationalNumber]:
         """Overrides EVSEControllerInterface.get_evse_present_voltage()."""
         if protocol in [Protocol.DIN_SPEC_70121, Protocol.ISO_15118_2]:
@@ -818,7 +864,7 @@ class SimEVSEController(EVSEControllerInterface):
             return RationalNumber(exponent=0, value=230)
 
     async def get_evse_present_current(
-        self, protocol: Protocol
+            self, protocol: Protocol
     ) -> Union[PVEVSEPresentCurrent, RationalNumber]:
         """Overrides EVSEControllerInterface.get_evse_present_current()."""
         if protocol in [Protocol.DIN_SPEC_70121, Protocol.ISO_15118_2]:
@@ -835,12 +881,12 @@ class SimEVSEController(EVSEControllerInterface):
         return IsolationLevel.VALID
 
     async def set_precharge(
-        self, voltage: PVEVTargetVoltage, current: PVEVTargetCurrent
+            self, voltage: PVEVTargetVoltage, current: PVEVTargetCurrent
     ):
         pass
 
     async def send_charging_command(
-        self, voltage: PVEVTargetVoltage, current: PVEVTargetCurrent
+            self, voltage: PVEVTargetVoltage, current: PVEVTargetCurrent
     ):
         pass
 
@@ -863,7 +909,7 @@ class SimEVSEController(EVSEControllerInterface):
         return PVEVSEMaxPowerLimit(multiplier=1, value=1000, unit="W")
 
     async def get_dc_charge_params_v20(
-        self, selected_service: ServiceV20
+            self, selected_service: ServiceV20
     ) -> Union[
         DCChargeParameterDiscoveryResParams, BPTDCChargeParameterDiscoveryResParams
     ]:
@@ -889,7 +935,7 @@ class SimEVSEController(EVSEControllerInterface):
             )
 
     async def get_dc_charge_loop_params_v20(
-        self, control_mode: ControlMode, selected_service: ServiceV20
+            self, control_mode: ControlMode, selected_service: ServiceV20
     ) -> Union[
         ScheduledDCChargeLoopResParams,
         BPTScheduledDCChargeLoopResParams,
@@ -934,7 +980,7 @@ class SimEVSEController(EVSEControllerInterface):
             return
 
     async def get_15118_ev_certificate(
-        self, base64_encoded_cert_installation_req: str, namespace: str
+            self, base64_encoded_cert_installation_req: str, namespace: str
     ) -> str:
         """
         Overrides EVSEControllerInterface.get_15118_ev_certificate().
