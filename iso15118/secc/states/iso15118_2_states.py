@@ -2062,7 +2062,7 @@ class ChargingStatus(StateSECC):
             receipt_required=False,
         )
         logger.info(
-            f"tuesday: max_delay: {ac_evse_status.notification_max_delay}, notification: {ac_evse_status.evse_notification}, delay: {ac_evse_status.rcd}")
+            f"ACEVSEStatus: max_delay: {ac_evse_status.notification_max_delay}, notification: {ac_evse_status.evse_notification}, delay: {ac_evse_status.rcd}")
 
         if charging_status_res.meter_info:
             self.comm_session.sent_meter_info = charging_status_res.meter_info
